@@ -1,9 +1,4 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer Assessment 1
 
 #clean the environment
 rm(list=ls())
@@ -167,8 +162,3 @@ xyplot(avg_steps~interval | daytype, data = df1_day,
       xlab = 'Interval',
       ylab = 'Number of Steps',
       layout = c(1,2))
-
-#export into png file
-dev.copy(png,file = "plot4.png",width=480, height=480)
-dev.off()
-      
