@@ -5,30 +5,43 @@ output:
     keep_md: true
 ---
 
+
+## Background
+
+In recent times, we have seen profileration of the activity monitoring devices, like Fitbit, Nike Fuelband or Jawbone Up. These devices track personal movement at all time. Unfortunately, the utilization of the data has been lacking so far.
+
+In this report, we will review the data from a personal activity device that collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day. The raw data and information is based on information from John Hopkins University source.
+
+
+## Task1 Loading and preprocessing the data
+Before we load and process the data, we first clean the environment. Then, we open the data that have been stored in the current working directory.
+
+```{r task1, echo = TRUE}
 #clean the environment
 rm(list=ls())
 
-##Task1 Loading and preprocessing the data
-
 #set working directory where the downloaded data is
 setwd("~/JHU Data Science/5Reproducible Research/Assignment1/repdata-data-activity")
+
 #load the data
 df <- read.csv("activity.csv", stringsAsFactors=FALSE )
-
+```
 
 ##Task2 What is mean total number of steps taken per day?
 
-#total number of steps = sum of steps per day
-#summarize table that have the daily sum table. ignore the missing values in the dataset
+The total number of steps is based on the combined sum of steps for each day. To get these values, we summarized the original raw data to create a daily sum table. As instructed, we ignored the missing values in the dataset.
+
+The data manipulation is done using data.table package.
+
+Based on the summarized data, a histogram of the total number of steps taken each day was constructed. 
+
+```{r task2, echo = TRUE}
 library(data.table)
 df = data.table(df)
 df_sum = df[, list(total_steps = sum(steps, na.rm = TRUE)), by = date]
-    
-#head(df_sum) #check the data
 
-##Make a histogram of the total number of steps taken each day
-##Calculate and report the mean and median total number of steps taken per day
-
+#check the first 3 rows of the daily summary table    
+head(df_sum,3)
 
 #create histogram
 hist(df_sum$total_steps, xlab ="total number of steps taken per day", main ="Steps Taken per Day", col = "green")
@@ -36,6 +49,7 @@ hist(df_sum$total_steps, xlab ="total number of steps taken per day", main ="Ste
 #calculate the mean & median
 mean_val = round(mean(df_sum$total_steps, na.rm=TRUE),2)
 median_val = round(median(df_sum$total_steps, na.rm=TRUE),2)
+sd_val = round(sd(df_sum$total_steps, na.rm=TRUE),2)
 
 #create abline for mean & median
 abline(v = mean_val, col = "red", lty = 2, lwd = 2 )
@@ -49,27 +63,36 @@ median_legend <- paste("median", median_val)
 legend("topright", col = c("red","blue"), legend = c(mean_legend, median_legend),
       lty = c(2,2), lwd= c(2,2))
 
-#export into png file
-dev.copy(png,file = "plot1.png",width=480, height=480)
-dev.off()
+```
+
+For the daily steps, the mean value is `r mean_val` steps and the median value is `r median_val` steps.
+
+As can be seen in the histogram, there is also quite a variation of the daily total step count. The standard deviation is `r sd_val`.
 
 ##Task3 What is the average daily activity pattern?
+For this task, we look at the data within the day. For each 5 min interval, what the average step is.
+First, we create a table that summarized the average steps for each interval. 
 
+Once again, we ignored the missing value in the datasets. Ignoring the missing value is the same as converting the NA into NULL or 0 values.
+
+To look at the data by interval, we made a time series plot with the x-axis is the 5-minutes interval and the y-axis is the average number of steps taken, averaged across all days.
+
+```{r task3, echo=TRUE}
 #summarize table that have the average of steps for each interval. ignore the missing values in the dataset
 df_interval = df[, list(avg_steps = mean(steps, na.rm = TRUE)), 
                           by = interval]
-#head(df_interval) #check the data
 
+#check the first 3 rows of the summary table
+head(df_interval,3) 
 
-##Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+#Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
 with(df_interval,plot(interval,avg_steps, type = "l", xlab="Interval", ylab="Average", 
     main = "Average Daily Activity Pattern", col = "green", lwd=2))
 
-##Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+#Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
 
 #find the interval that have the max
 max_interval <- df_interval[which.max(avg_steps),]
-#max_interval #check value 
 
 #create abline for max
 abline(v = max_interval$interval, col = "blue", lty = 2, lwd = 2 )
@@ -80,30 +103,35 @@ max_string <- paste("The maximum number of steps is",round(max_interval$avg_step
 
 #create legend with the value
 legend("topright", col = "blue", legend = max_string, lty = 2, lwd= 2, bty = "n")
+```
 
-#export into png file
-dev.copy(png,file = "plot2.png",width=480, height=480)
-dev.off()
+On average, across all the days in the dataset, the interval of `r max_interval$interval` contains the maximum number of steps, which is `r round(max_interval$avg_steps,1)`.
+
 
 ##Task4 Imputing missing values
 
+In the raw data, there were quite a few missing data. This could happened due to measurement or recording error or no activity at all. In the previous assessment, we assumed that all the missing data are due to no activity (0 steps). This assumption possibly caused the mean and median of the total daily steps to be lower than actual.
+
+In this step, we devised another strategy to deal with the missing data. Instead of using 0 value, we now assumed that there is an underlying constant number of steps for each interval. We used the mean for all the interval to replace the NA.
+
+After that, we then created a new table with all the NA have been filled. Then, a histogram with the new data was plotted.
+
+```{r task4, echo=TRUE}
 #Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs
 summary(df$steps)
 count_na <- sum(is.na(df$steps))
-
-#Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
-
-#Create a new dataset that is equal to the original dataset but with the missing data filled in.
 
 #copy the original df into new df1
 df1 <- df
 
 #The mean of steps in the original data is 37
-#replace steps == NA with 37. Assume that when NA, there is similar steps as the rest.
-df1[is.na(df)] <- 37
-#summary(df1) #check value
+original_mean <- mean(df$steps, na.rm=TRUE)
 
-#Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. 
+#replace steps == NA with 37. Assume that when NA, there is similar steps as the rest.
+df1[is.na(df)] <- original_mean
+
+#check whether there is still NA
+summary(df1$steps)
 
 #create new sum table
 df_sum1 = df1[, list(total_steps = sum(steps, na.rm = TRUE)), by = date]
@@ -126,20 +154,25 @@ median_legend1 <- paste("New median", median_val1)
 #create legend with the value
 legend("topright", col = c("red","blue"), legend = c(mean_legend1, median_legend1),
       lty = c(2,2), lwd= c(2,2))
+```
 
-#export into png file
-dev.copy(png,file = "plot3.png",width=480, height=480)
-dev.off()
+In the original data, there were `r count_na` NA.
 
+All of these NA were replaced with the mean for all interval, which is `r round(original_mean,1)` steps.
 
-#Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+For comparison purpose, we reprint the original mean and median total steps values. Before the NA were replaced, the mean is `r mean_val` steps and the median is the `r median_val` steps.
+After imputting the NA with the mean for all interval, the new mean value is `r mean_val1` steps and the new median value is `r median_val1` steps.
 
-#The new mean and median are higher now since the NA / 0 / NULL values are replaced with values > 0.
+The new values differed from the estimates from the first part of assignment. Replacing 0 (ignore NA) with higher number (overall mean) caused higher estimates of the total daily number of steps.
 
 ##Task5 Are there differences in activity patterns between weekdays and weekends?
+To check whether the steps count change between working days and non-working days, we checked on pattern between weekdays and weekends.
 
-#Create a new factor variable in the dataset with two levels -- "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+First we created a new variable in the dataset with two levels; "weekday" or "weekend". This indicated whether a given date is a weekday or weekend day.
 
+Then, we will use this to plot the data with the x-axis is the 5-minute interval and the y-axis is the average number of steps taken. To make it easier to see the difference between weekend and weekdays, we plot the data separately in two panels.
+
+```{r task5, echo=TRUE}
 #Make Function To Return Either "Weekday" or "Weekend"
 weekpart = function(x){
         if(x %in% c('Saturday', 'Sunday')){
@@ -159,16 +192,14 @@ df1$daytype = as.factor(apply(as.matrix(df1$dayname), 1, weekpart))
 df1_day = df1[, list(avg_steps = mean(steps, na.rm = T)), 
                           by = list(interval, daytype)]
 
-#Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). The plot should look something like the following, which was created using simulated data:
-
+#make panel plot
 library(lattice)
 xyplot(avg_steps~interval | daytype, data = df1_day,
       type = 'l',
       xlab = 'Interval',
       ylab = 'Number of Steps',
       layout = c(1,2))
+```
 
-#export into png file
-dev.copy(png,file = "plot4.png",width=480, height=480)
-dev.off()
-      
+In the weekend, there is more constant average number of steps taken throughout the day. 
+In the weekdays, there is a high spike of steps count in the morning, then this taper off the rest of the day.
